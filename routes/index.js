@@ -1,9 +1,10 @@
 const express = require('express');
 const PDFDocument = require("pdfkit-table");
 const SVGtoPDF = require('svg-to-pdfkit')
-const pdfService = require('../service/pdf-service');
 
 const fs = require('fs')
+
+const img = fs.readFileSync("./logo.svg").toString()
 
 const reqData = {
   projectTitle: 'Test project',
@@ -26,6 +27,42 @@ const reqData = {
   sessions: [
     ['Wed, May 04, 2022', [{
       title: 'from unlisted to project',
+      desc: 'LOrems dadsa dsad adsadka dia sndsaid nasud adsa da',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]],
+    ['Wed, May 05, 2022', [{
+      title: 'Latest',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]],
+    ['Wed, May 05, 2022', [{
+      title: 'Latest',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]],
+    ['Wed, May 05, 2022', [{
+      title: 'Latest',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]],
+    ['Wed, May 05, 2022', [{
+      title: 'Latest',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]],
+    ['Wed, May 05, 2022', [{
+      title: 'Latest',
       start_time: '19:00',
       end_time: '22:00',
       total_time: '3.0',
@@ -45,46 +82,60 @@ const generateUserTable = (procentW, data) => {
   }
 }
 
-const generateSessionTable = (procentW) => {
+const generateSessionTable = (procentW, data) => {
   return {
     headers: [
-      { label: "Title", property: 'title', headerColor: '#fff', width: procentW * 28.075},
-      { label: "Desc", property: 'desc', headerColor: '#fff', width: procentW * 28.075},
+      { label: "User name", property: 'user', headerColor: '#fff', width: procentW * 15},
+      { label: "Title / Desc", property: 'title', headerColor: '#fff', width: procentW * 38},
       { label: "Start Time", property: 'start_time', headerColor: '#fff', align: 'center', width: procentW * 9},
       { label: "End Time", property: 'end_time', headerColor: '#fff', align: 'center', width: procentW * 9},
-      { label: "Total Hours", property: 'total_hours', headerColor: '#fff', align: 'right', width: procentW * 9}
+      { label: "Total Hours", property: 'total_time', headerColor: '#fff', align: 'right', width: procentW * 9}
     ],
-    datas: [
-      {
-        title: 'Test title dsad sadasdsad sadsadad adsa',
-        desc: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc pellentesque erat neque, ac bibendum sem mollis et.',
-        start_time: '10:20',
-        end_time: '14:20',
-        total_hours: '4'
-      },
-      {
-        title: 'Test title dsad sadasdsad sadsadad adsa',
-        desc: '',
-        start_time: '10:20',
-        end_time: '14:20',
-        total_hours: '4'
-      }
-    ],
+    datas: data.map(el => ({...el, title: `${el.title}${el.desc ? '\n\n' + el.desc : ''}`})),
   }
 }
 
-const instText = (doc) => {
-  doc.text('test')
+const generateTableWithTitle = (doc, data, procentW) => {
+  //title
+  doc.fontSize(12)
+  doc.fill('#000').stroke()
+  doc.font('Helvetica-Bold').text('Sesion info', 50, doc.y + 10)
+  doc.moveDown(0.6)
+
+  for (let [date, sessions] of data) {    
+    //move to new page
+    if (doc.y > 700)
+      doc.addPage();
+    //date
+    doc.fontSize(9)
+    doc.font('Helvetica').text(date, 50)
+    doc.moveDown(2)
+
+    //separator
+    doc.rect(60, doc.y - 13, doc.page.width - 120, 0.4).fill('#2C3C48')
+
+    //table
+    doc.table(generateSessionTable(procentW, sessions), {
+      x: 60,
+      columnSpacing: 10,
+      divider: {
+        header: { disabled: false, width: 0.4, opacity: 1 },
+        horizontal: { disabled: false, width: 0.4, opacity: 1 }
+      },
+    })
+    doc.moveDown(0.5)
+  }
 }
 
 const router = express.Router();
 router.get('/', (req, res, next) => {
-  const doc = new PDFDocument({ bufferPages: true, size: 'A4', margin: 50 });
+  const doc = new PDFDocument({ bufferPages: true, size: 'A4', margin: 50});
 
   const procentW = doc.page.width / 100
 
   //icon bg
   doc.lineJoin('round').rect(61, 79, 22, 22).lineWidth(22).stroke('#2C3C48')
+  SVGtoPDF(doc, img, 50 + (35/2/2), 68 + (35/2/2))
 
   //project info
   doc.fontSize(10)
@@ -125,22 +176,14 @@ router.get('/', (req, res, next) => {
     }
   }); 
 
-  //sessions Title
-  doc.fontSize(12)
-  doc.fill('#000').stroke()
-  doc.font('Helvetica-Bold').text('Sesion info', 50, doc.y + 10)
+  generateTableWithTitle(doc, reqData.sessions, procentW)
 
-  doc.rect(50, doc.y + 10, doc.page.width - 100, 0.4).fill('#2C3C48')
+  const range = doc.bufferedPageRange(); // => { start: 0, count: 2 }
 
-  //session table
-  doc.moveDown(1.5)
-  doc.table(generateSessionTable(procentW), {
-    columnSpacing: 10,
-    divider: {
-      header: { disabled: false, width: 0.4, opacity: 1 },
-      horizontal: { disabled: false, width: 0.4, opacity: 1 }
-    }
-  }); 
+  for (i = range.start, end = range.start + range.count, range.start <= end; i < end; i++) {
+    doc.switchToPage(i);
+    doc.text(`Page ${i + 1} of ${range.count}`, 50, doc.page.height - 60, {align: 'right', width: doc.page.width - 100});
+  }
 
   doc.pipe(res)
   doc.end()
