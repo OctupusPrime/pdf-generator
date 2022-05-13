@@ -5,20 +5,43 @@ const pdfService = require('../service/pdf-service');
 
 const fs = require('fs')
 
-const generateUserTable = (procentW) => {  
+const reqData = {
+  projectTitle: 'Test project',
+  client: {
+    name: 'Misha Sokil',
+    email: 'm.sokil.dev@gmail.com'
+  },
+  date: 'May 5, 2022',
+  usersTable: [
+    {
+      name: 'Misha Sokil',
+      role: '',
+      hours: '10'
+    }, {
+      name: 'Eli Bates',
+      role: 'Front end',
+      hours: '1'
+    }
+  ],
+  sessions: [
+    ['Wed, May 04, 2022', [{
+      title: 'from unlisted to project',
+      start_time: '19:00',
+      end_time: '22:00',
+      total_time: '3.0',
+      user: 'Misha Sokil'
+    }]]
+  ]
+}
+
+const generateUserTable = (procentW, data) => {  
   return {
     headers: [
       { label: "Name", property: 'name', headerColor: '#fff', width: procentW * 36.575},
       { label: "Role", property: 'role', headerColor: '#fff', width: procentW * 36.575},
       { label: "Total Hours", property: 'hours', headerColor: '#fff', width: procentW * 10, align: 'right'}
     ],
-    datas: [
-      {
-        name: 'Misha Sokil',
-        role: 'Front end dev',
-        hours: '30.0'
-      }
-    ],
+    datas: [...data],
   }
 }
 
@@ -50,6 +73,10 @@ const generateSessionTable = (procentW) => {
   }
 }
 
+const instText = (doc) => {
+  doc.text('test')
+}
+
 const router = express.Router();
 router.get('/', (req, res, next) => {
   const doc = new PDFDocument({ bufferPages: true, size: 'A4', margin: 50 });
@@ -61,17 +88,17 @@ router.get('/', (req, res, next) => {
 
   //project info
   doc.fontSize(10)
-  doc.font('Helvetica-Bold').text('Project title', 108, 70)
+  doc.font('Helvetica-Bold').text(reqData.projectTitle, 108, 70)
   doc.moveDown(0.2);
-  doc.font('Helvetica').text('Client info')
+  doc.font('Helvetica').text(reqData.client.name)
   doc.moveDown(0.2);
-  doc.text('Contact info')
+  doc.text(reqData.client.email)
 
   //dates
   doc.fontSize(10)
   doc.font('Helvetica-Bold').text('Generated date', 108, 84, {width: doc.page.width - 108 - 50, align: 'right'})
   doc.moveDown(0.2);
-  doc.font('Helvetica').text('May 5, 2022', {width: doc.page.width - 108 - 50, align: 'right'})
+  doc.font('Helvetica').text(reqData.date, {width: doc.page.width - 108 - 50, align: 'right'})
 
   //separator
   doc.rect(50, 133, doc.page.width - 100, 3).fill('#818A91')
@@ -90,7 +117,7 @@ router.get('/', (req, res, next) => {
   doc.rect(50, 223, doc.page.width - 100, 0.4).fill('#2C3C48')
 
   //users table
-  doc.table(generateUserTable(procentW), {
+  doc.table(generateUserTable(procentW, reqData.usersTable), {
     columnSpacing: 10,
     divider: {
       header: { disabled: false, width: 0.4, opacity: 1 },
@@ -109,12 +136,12 @@ router.get('/', (req, res, next) => {
   doc.moveDown(1.5)
   doc.table(generateSessionTable(procentW), {
     columnSpacing: 10,
-    // divider: {
-    //   header: { disabled: false, width: 0.4, opacity: 1 },
-    //   horizontal: { disabled: false, width: 0.4, opacity: 1 }
-    // }
+    divider: {
+      header: { disabled: false, width: 0.4, opacity: 1 },
+      horizontal: { disabled: false, width: 0.4, opacity: 1 }
+    }
   }); 
-  
+
   doc.pipe(res)
   doc.end()
 });
